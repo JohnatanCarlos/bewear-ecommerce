@@ -4,8 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth-client";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 
 const formSchema = z.object({
@@ -23,6 +26,7 @@ const formSchema = z.object({
 type FormSchema = z.infer<typeof formSchema>;
 
 const SignUpForm = () => {
+    const router = useRouter();
     const form = useForm<FormSchema>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -33,8 +37,26 @@ const SignUpForm = () => {
         },
     });
 
-    function onSubmit(values: FormSchema) {
-        console.log(values);
+    async function onSubmit(values: FormSchema) {
+        await authClient.signUp.email({
+            name: values.name,
+            email: values.email,
+            password: values.password,
+            fetchOptions: {
+                onSuccess: () => {
+                    toast.success("Conta criada com sucesso!");
+                    router.push("./")
+                },
+                onError: (error) => {
+                    if(error.error.code === "USER_ALREADY_EXISTS") {
+                        toast.error(error.error.message);
+                        form.setError("email", { message: "E-mail já cadastrado"});
+                    }else {
+                        toast.error(error.error.message);
+                    }
+                }
+            }
+        });
     }
 
     return ( 
